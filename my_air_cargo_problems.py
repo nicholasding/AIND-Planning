@@ -57,19 +57,74 @@ class AirCargoProblem(Problem):
         def load_actions():
             """Create all concrete Load actions and return a list
 
+            Action(Load(c, p, a),
+	            PRECOND: At(c, a) ∧ At(p, a) ∧ Cargo(c) ∧ Plane(p) ∧ Airport(a)
+	            EFFECT: ¬ At(c, a) ∧ In(c, p))
+
             :return: list of Action objects
             """
             loads = []
-            # TODO create all load ground actions from the domain Load action
+            for airport in self.airports:
+                for plane in self.planes:
+                    for cargo in self.cargos:
+                        precond = [
+                            # Positive
+                            [
+                                expr("At({}, {})".format(cargo, airport)),
+                                expr("At({}, {})".format(plane, airport)),
+                            ],
+                            # Negative
+                            [],
+                        ]
+                        effect = [
+                            # Positive
+                            [expr("In({}, {})".format(cargo, plane))],
+                            # Negative
+                            [expr("At({}, {})".format(cargo, plane))],
+                        ]
+                        load_action = Action(
+                            expr("Load({}, {}, {})".format(cargo, plane, airport)),
+                            precond, effect
+                        )
+                        loads.append(load_action)
+
             return loads
 
         def unload_actions():
             """Create all concrete Unload actions and return a list
 
+            Action(Unload(c, p, a),
+	            PRECOND: In(c, p) ∧ At(p, a) ∧ Cargo(c) ∧ Plane(p) ∧ Airport(a)
+	            EFFECT: At(c, a) ∧ ¬ In(c, p))
+
             :return: list of Action objects
             """
             unloads = []
-            # TODO create all Unload ground actions from the domain Unload action
+
+            for airport in self.airports:
+                for plane in self.planes:
+                    for cargo in self.cargos:
+                        precond = [
+                            # Positive
+                            [
+                                expr("In({}, {})".format(cargo, plane)),
+                                expr("At({}, {})".format(plane, airport)),
+                            ],
+                            # Negative
+                            [],
+                        ]
+                        effect = [
+                            # Positive
+                            [expr("At({}, {})".format(cargo, airport))],
+                            # Negative
+                            [expr("In({}, {})".format(cargo, plane))],
+                        ]
+                        load_action = Action(
+                            expr("Unload({}, {}, {})".format(cargo, plane, airport)),
+                            precond, effect
+                        )
+                        unloads.append(load_action)
+
             return unloads
 
         def fly_actions():
@@ -82,8 +137,7 @@ class AirCargoProblem(Problem):
                 for to in self.airports:
                     if fr != to:
                         for p in self.planes:
-                            precond_pos = [expr("At({}, {})".format(p, fr)),
-                                           ]
+                            precond_pos = [expr("At({}, {})".format(p, fr))]
                             precond_neg = []
                             effect_add = [expr("At({}, {})".format(p, to))]
                             effect_rem = [expr("At({}, {})".format(p, fr))]
@@ -103,9 +157,19 @@ class AirCargoProblem(Problem):
             e.g. 'FTTTFF'
         :return: list of Action objects
         """
-        # TODO implement
         possible_actions = []
-        return possible_actions
+        kb = PropKB()
+        kb.tell(decode_state(state, self.state_map).pos_sentence())
+        for action in self.actions_list:
+            is_possible = True
+            for clause in action.precond_pos:
+                if clause not in kb.clauses:
+                    is_possible = False
+            for clause in action.precond_neg:
+                if clause in kb.clauses:
+                    is_possible = False
+            if is_possible:
+                yield action
 
     def result(self, state: str, action: Action):
         """ Return the state that results from executing the given
@@ -116,8 +180,20 @@ class AirCargoProblem(Problem):
         :param action: Action applied
         :return: resulting state after action
         """
-        # TODO implement
         new_state = FluentState([], [])
+        old_state = decode_state(state, self.state_map)
+        for fluent in old_state.pos:
+            if fluent not in action.effect_rem:
+                new_state.pos.append(fluent)
+        for fluent in action.effect_add:
+            if fluent not in new_state.pos:
+                new_state.pos.append(fluent)
+        for fluent in old_state.neg:
+            if fluent not in action.effect_add:
+                new_state.neg.append(fluent)
+        for fluent in action.effect_rem:
+            if fluent not in new_state.neg:
+                new_state.neg.append(fluent)
         return encode_state(new_state, self.state_map)
 
     def goal_test(self, state: str) -> bool:
