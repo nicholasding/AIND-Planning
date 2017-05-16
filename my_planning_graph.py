@@ -354,7 +354,7 @@ class PlanningGraph():
 
         # Add all effect state nodes from previous action nodes into state level
         for a_node in self.a_levels[level - 1]:
-            s_nodes = a_node.effect_s_nodes()
+            s_nodes = a_node.effnodes
             # Link state node and action node
             for s_node in s_nodes:
                 a_node.children.add(s_node)
@@ -419,8 +419,8 @@ class PlanningGraph():
         """
         # TODO test for Inconsistent Effects between nodes
         
-        state_nodes_a1 = node_a1.effect_s_nodes()
-        state_nodes_a2 = node_a2.effect_s_nodes()
+        state_nodes_a1 = node_a1.effnodes
+        state_nodes_a2 = node_a2.effnodes
 
         for node_i in state_nodes_a1:
             for node_j in state_nodes_a2:
@@ -449,8 +449,8 @@ class PlanningGraph():
             """
             If action one of A's effects negates one of action B's preconditions, return True
             """
-            effects = node_a.effect_s_nodes()
-            preconds = node_b.precond_s_nodes()
+            effects = node_a.effnodes
+            preconds = node_b.prenodes
 
             for effect in effects:
                 for precond in preconds:
