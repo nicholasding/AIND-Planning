@@ -319,10 +319,16 @@ class PlanningGraph():
             for action in self.all_actions:
                 if s_node.is_pos:
                     if s_node.symbol in action.precond_pos:
-                        self.a_levels[level].add(PgNode_a(action))
+                        a_node = PgNode_a(action)
+                        a_node.parents.add(s_node)
+                        s_node.children.add(a_node)
+                        self.a_levels[level].add(a_node)
                 else:
                     if s_node.symbol in action.precond_neg:
-                        self.a_levels[level].add(PgNode_a(action))
+                        a_node = PgNode_a(action)
+                        a_node.parents.add(s_node)
+                        s_node.children.add(a_node)
+                        self.a_levels[level].add(a_node)
 
 
     def add_literal_level(self, level):
@@ -348,7 +354,12 @@ class PlanningGraph():
 
         # Add all effect state nodes from previous action nodes into state level
         for a_node in self.a_levels[level - 1]:
-            self.s_levels[level].update(a_node.effect_s_nodes())
+            s_nodes = a_node.effect_s_nodes()
+            # Link state node and action node
+            for s_node in s_nodes:
+                a_node.children.add(s_node)
+                s_node.parents.add(a_node)
+            self.s_levels[level].update(s_nodes)
 
     def update_a_mutex(self, nodeset):
         """ Determine and update sibling mutual exclusion for A-level nodes
